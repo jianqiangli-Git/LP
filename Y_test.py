@@ -71,11 +71,20 @@ def getNoLinked(net,total_node):
     return noLinked_set
 
 #传入字典形式的图结构，得到字典形式的每个节点的度
-def getDictDegree(net):
-    degree = {}
-    for i in net:
-        degree[i] = len(net[i])
+def getDictDegree(G):
+    degree = nx.degree(G)
     return degree
+
+#传入所有节点集合vertice，得到每个节点跟需要预测的节点之间的共同邻居有哪些
+def getCommonNeighbor_node(G,cur,vertice):
+    commom = {}
+    set_ver = set(vertice)
+    for v in vertice:
+        notDirecLinked = set_ver-set(cur[v])
+        for n in notDirecLinked:
+            if int(v)<int(n):
+                commom[(v,n)] = sorted(nx.common_neighbors(G,n,v))
+    return commom
 
 #把边集分成测试集和训练集，列表形式
 def devide_train_and_test_set(edges,ratio):
@@ -118,32 +127,9 @@ def getHIndice(cur,degreeDict,c):
             break
     return HIndice
 
-def getCore(net,degreeDict):
-    cur=deepcopy(net)
-    c={}
-    for i in cur:
-        if len(cur[i]) == 0:
-            c[i] = 0
-            cur.pop(i)
-        else:
-            c[i]=1
-    for core in range(2,60):
-        while True:
-            for j in list(cur.keys()):
-                if degreeDict[j]<core:
-                    for index in cur:
-                        if j in cur[index]:
-                            cur[index].remove(j)
-                    cur.pop(j)
-            temp=getDictDegree(cur)
-            if temp==degreeDict:
-                break
-            degreeDict=temp
-        for item in cur:
-            c[item]=core
-        if len(cur)==0:
-            break
-    return c
+def getCore(G):
+    core_dict = nx.core_number(G)
+    return core_dict
 
 #传入测试集和未连接边的 {预测边:连接概率} 的字典关系，得到AUC
 def getAUC(test_set,info):
@@ -164,16 +150,16 @@ def getAUC(test_set,info):
     noLinked_list = sorted(noLinked_set_score_info)
     for t in test_list:
         for n in noLinked_list:
-            if t==n:
+            if t>n:
                 auc = auc+0.5
-            elif t>n:
+            elif t==n:
                 auc = auc+1
             else:
                 break
     auc = auc/(len_test*len_noLinked)
     return auc
 
-def CN(adjMatrix,vertice,cur):
+def CN_num(adjMatrix,vertice,cur):
     CN_info = {}
     set_ver = set(vertice)
     square = adjMatrix.dot(adjMatrix)
@@ -202,9 +188,48 @@ def AA_RA(G):
             RA_info[(i,j)]=k
     return AA_info,RA_info
 
+def Hindice_AA_RA(vertice,cur,adj,Hindice):
+    AA_info = {}
+    RA_info = {}
+    set_ver = set(vertice)
+    for v in vertice:
+        notLinked = set_ver-set(cur[v])
+        for n in notLinked:
+            if int(n)>int(v):
+                total_AA = 0
+                total_RA = 0
+                dup_vertice = deepcopy(vertice)
+                dup_vertice.remove(v)
+                for j in dup_vertice:
+                    if adj[int(v)][int(j)] !=0 and adj[int(j)][int(n)] != 0:
+                        k_j = sum(adj[int(j)])
+                        total_AA = total_AA+1/math.log(2,k_j)
+                        total_RA = total_RA+1/k_j
+                AA_info[(v,n)] = total_AA
+                RA_info[(v,n)] = total_RA
+                if (v,n) not in set(AA_info.keys()):
+                    AA_info[(v,n)] = 0
+                if (v, n) not in set(AA_info.keys()):
+                    AA_info[(v, n)] = 0
+    return AA_info,RA_info
+
 def LRW():
     pass
 
 if __name__ == "__main__":
     Yeast_path = r"C:\Users\Tang\Desktop\data\Yeast.txt"
     edges=read_file(Yeast_path)
+    G = nx.Graph()
+    tr, te = devide_train_and_test_set(edges, 0.5)
+    print("te:", te)
+    G.add_edges_from(tr)
+    nodes = set(G.nodes())
+    v = set(getVertice(edges))
+    print("discard_nodes:", v - nodes)
+    G.add_nodes_from(v-nodes)
+    AA, RA = AA_RA(G)
+    print("AUC_AA:",getAUC(te, AA))
+    plt.figure()
+    nx.draw(G, with_labels=True)
+    plt.show()
+
