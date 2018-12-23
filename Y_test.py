@@ -146,6 +146,23 @@ def devide_train_and_test_set(edges,ratio):
     train_set = list(filter(lambda n: n not in test_set, dup_edges))
     return train_set,test_set
 
+#传入图的字典形式和度的字典，得到这个图的概率转移矩阵 PMatrix
+def creatPMatrix(net,degreeDict):
+    n = len(net.keys())
+    PMatrix = np.zeros((n,n))
+    for i in net.keys():
+        if len(net[i])==0:
+            continue
+        for j in net[i]:
+            PMatrix[int(i)][int(j)] = 1/degreeDict[i]
+    return PMatrix
+
+#传入概率转移矩阵PMatrix，得到n步概率转移矩阵
+def getNPmatrix(PMatrix,n):
+    for i in range(n-1):
+        PMatrix = np.dot(PMatrix,PMatrix)
+    return PMatrix
+
 # 传入一个节点的邻居的度，得到这个节点的 h-indice
 def H(real):
     h=0
@@ -179,6 +196,7 @@ def getHIndice(cur,degreeDict,c):
             break
     return HIndice
 
+#得到图的核数字典
 def getCore(G):
     core_dict = nx.core_number(G)
     return core_dict
@@ -305,7 +323,7 @@ def LRW():
 if __name__ == "__main__":
     Yeast_path = r"C:\Users\Tang\Desktop\data\Yeast.txt"
     edges=read_file(Yeast_path)
-    tr, te = devide_train_and_test_set(edges, 0.5)
+    tr, te = devide_train_and_test_set(edges, 0.1)
     print("te:", te)
     # G.add_edges_from(tr)
     # nodes = set(G.nodes())
