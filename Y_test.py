@@ -138,13 +138,24 @@ def getCommonNeighbor_node(G,cur,vertice):
                 commom[(v,n)] = sorted(nx.common_neighbors(G,n,v))
     return commom
 
-#把边集分成测试集和训练集，列表形式
+#把边集分成测试集和训练集，列表形式,传入的比率是测试集的占比
 def devide_train_and_test_set(edges,ratio):
     dup_edges = deepcopy(edges)
     test_set_num = int(len(edges)*ratio)
     test_set = random.sample(edges,test_set_num)
     train_set = list(filter(lambda n: n not in test_set, dup_edges))
     return train_set,test_set
+
+#输入当前图的字典形式和所有的节点，得到需要预测的边{点:{需要预测的边}}
+def getEdgeForPredict(cur,vertice):
+    edgeForPredict = {}
+    set_ver = set(vertice)
+    for v in vertice:
+        ver = deepcopy(set_ver)
+        ver.discard(v)
+        notDireclinked = ver-set(cur[v])
+        edgeForPredict[v] = notDireclinked
+    return edgeForPredict
 
 #传入图的字典形式和度的字典，得到这个图的概率转移矩阵 PMatrix
 def creatPMatrix(net,degreeDict):
@@ -201,33 +212,6 @@ def getCore(G):
     core_dict = nx.core_number(G)
     return core_dict
 
-#传入测试集和未连接边的 {预测边:连接概率} 的字典关系，得到AUC
-def getAUC(test_set,info):
-    auc = 0
-    test_set_score_info = []
-    noLinked_set_score_info = []
-    for i in set(info.keys()):
-        if list(i) in test_set:
-            test_set_score_info.append(info[i])
-        else:
-            noLinked_set_score_info.append(info[i])
-    len_test = len(test_set_score_info)
-    print("len_test------>",len_test)
-    len_noLinked = len(noLinked_set_score_info)
-    print("len_nolinked-------->",len_noLinked)
-    print("info------>",len(info.keys()))
-    test_list=sorted(test_set_score_info)
-    noLinked_list = sorted(noLinked_set_score_info)
-    for t in test_list:
-        for n in noLinked_list:
-            if t>n:
-                auc = auc+0.5
-            elif t==n:
-                auc = auc+1
-            else:
-                break
-    auc = auc/(len_test*len_noLinked)
-    return auc
 
 def CN_num(adjMatrix,vertice,cur):
     CN_info = {}
@@ -266,7 +250,6 @@ def getHn_AA_RA(Hn):
     Hn_AA = {}
     Hn_RA = {}
     for i in Hn:
-        print("Get to calculate {i}_AA_RA... ".format(i=i))
         pred_AA = hn_adamic_adar_index(G, Hn[i])
         pred_RA = hn_resource_allocation_index(G, Hn[i])
         for u, v, p in pred_AA:
@@ -283,6 +266,59 @@ def getHn_AA_RA(Hn):
         Hn_AA_info[i] = Hn_AA
     return Hn_AA_info,Hn_RA_info
 
+#传入n-step转移概率矩阵得到每个节点转移到其他节点的概率矩阵
+def getVerticeTransformProbMatrix(NPmatrix):
+    n = len(NPmatrix[0])
+    ver_matrix = np.eye(n)
+    prob_matrix = np.dot(ver_matrix, NPmatrix)
+    return prob_matrix
+
+#传入n步转移矩阵，待预测的边的字典，图节点的度字典，边的总数得到每对待预测边的lrw分
+def LRW(edgeForPrediction,degreeDict,edge_num,prob_matrix):
+    lrw_info = {}
+    print("probMatrix:")
+    print(prob_matrix)
+    for i in edgeForPrediction:
+        for j in edgeForPrediction[i]:
+            if int(i)<int(j):
+                lrw_info[(i,j)] = (degreeDict[i]*prob_matrix[int(i)][int(j)]+degreeDict[j]*prob_matrix[int(j)][int(i)])/(2*edge_num)
+    return lrw_info
+
+#传入需要预测的边字典，Hn，边数，每个节点到其他节点的转移概率矩阵得到使用Hn各个中间过程指标的待预测边的LRW分,其中Hn代表一系列的H指数h(0~n)
+def getHn_LRW(edgeForPrediction,Hn,edge_num,prob_matrix):
+    Hn_LRW_info = {}
+    for n in Hn:
+        Hn_LRW = {}
+        for i in edgeForPrediction:
+            for j in edgeForPrediction[i]:
+                if int(i) < int(j):
+                    Hn_LRW[(i, j)] = (Hn[n][i] * prob_matrix[int(i)][int(j)] + Hn[n][j] * prob_matrix[int(j)][int(i)]) / (2 * edge_num)
+        Hn_LRW_info[n] = Hn_LRW
+    return Hn_LRW_info
+
+#传入概率转移矩阵P和转移步数t得到各个待预测边2~t步转移分之和,其中H代表单纯的H指数
+def getHSRW(P,H,edgeForPrediction,prob_matrix,edge_num,t):
+    NPmatrix = {}
+    HSRW_info = {}
+    NP = getNPmatrix(P, 2)
+    NPmatrix["2"] = NP
+    for i in range(3,t+1):
+        NP = np.dot(NP,NP)
+        NPmatrix[str(i)] = NP
+
+    for i in edgeForPrediction:
+        for j in edgeForPrediction[i]:
+            if int(i) < int(j):
+                HSRW_info[(i,j)] = 0
+
+    for n in NPmatrix:
+        print("======================{index}=======================".format(index=n))
+        for edge in HSRW_info:
+            i = list(edge)[0]
+            j = list(edge)[1]
+            score = (H[i] * NPmatrix[n][int(i)][int(j)] + H[j] * NPmatrix[n][int(j)][int(i)]) /(2*edge_num)
+            HSRW_info[(i, j)] = HSRW_info[(i, j)] + score
+    return HSRW_info
 
 # def Hindice_AA_RA(vertice,cur,adj,Hindice):
 #     Hn_AA_info = {}
@@ -317,8 +353,31 @@ def getHn_AA_RA(Hn):
 #         Hn_RA_info[h] = RA_info
 #     return Hn_AA_info,Hn_RA_info
 
-def LRW():
-    pass
+#传入测试集和未连接边的 {预测边:连接概率} 的字典关系，得到AUC
+def getAUC(test_set,info):
+    auc = 0
+    test_set_score_info = []
+    noLinked_set_score_info = []
+    for i in set(info.keys()):
+        if list(i) in test_set:
+            test_set_score_info.append(info[i])
+        else:
+            noLinked_set_score_info.append(info[i])
+    len_test = len(test_set_score_info)
+    len_noLinked = len(noLinked_set_score_info)
+    test_list=sorted(test_set_score_info)
+    noLinked_list = sorted(noLinked_set_score_info)
+    for t in test_list:
+        for n in noLinked_list:
+            if t>n:
+                auc = auc+1
+            elif t==n:
+                auc = auc+0.5
+            else:
+                break
+    auc = auc/(len_test*len_noLinked)
+    return auc
+
 
 if __name__ == "__main__":
     Yeast_path = r"C:\Users\Tang\Desktop\data\Yeast.txt"
@@ -352,6 +411,19 @@ if __name__ == "__main__":
         print(j)
         auc_RA = getAUC(te, H_RA[j])
         print("AUC_RA_{index}:".format(index=j), auc_RA)
+        print("")
+    v= getVertice(edges)
+    eforpre = getEdgeForPredict(net,v)
+    P=creatPMatrix(net,degree)
+    NP = getNPmatrix(P,3)
+    probMatrix = getVerticeTransformProbMatrix(NP)
+    lrw = LRW(eforpre,degree,len(tr),probMatrix)
+    print("AUC_LRW:",getAUC(te,lrw))
+    Hn_LRW = getHn_LRW(eforpre,h,len(tr),probMatrix)
+    for k in Hn_LRW:
+        print(k)
+        auc_LRW = getAUC(te, Hn_LRW[k])
+        print("AUC_LRW_{index}:".format(index=k), auc_LRW)
         print("")
     plt.figure()
     nx.draw(G,with_labels=True)
