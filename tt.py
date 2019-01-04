@@ -170,7 +170,7 @@ def getHn_AA_RA(Hn):
     return Hn_AA_info,Hn_RA_info
 
 #传入n-step转移概率矩阵得到每个节点转移到其他节点的概率矩阵
-def getVerticeTransformProbMatrix(NPmatrix):
+def getVerTransProbMatrix(NPmatrix):
     n = len(NPmatrix[0])
     ver_matrix = np.eye(n)
     prob_matrix = np.dot(ver_matrix, NPmatrix)
@@ -187,7 +187,7 @@ def LRW(edgeForPrediction,degreeDict,edge_num,prob_matrix):
                 lrw_info[(i,j)] = (degreeDict[i]*prob_matrix[int(i)][int(j)]+degreeDict[j]*prob_matrix[int(j)][int(i)])/(2*edge_num)
     return lrw_info
 
-#将Hn的各个中间指标应用到LRW中，得到Hn各个中间指标的lrw分，其中Hn代表一系列的H指数h(0~n)
+#将Hn的各个中间指标应用到LRW中，得到Hn各个中间指标的t步lrw分，其中Hn代表一系列的H指数h(0~n)
 def getHn_LRW(edgeForPrediction,Hn,edge_num,prob_matrix):
     Hn_LRW_info = {}
     for n in Hn:
@@ -199,29 +199,67 @@ def getHn_LRW(edgeForPrediction,Hn,edge_num,prob_matrix):
         Hn_LRW_info[n] = Hn_LRW
     return Hn_LRW_info
 
-#传入概率转移矩阵P和转移步数t得到各个待预测边2~t步转移分之和,其中H代表单纯的H指数
-def getHSRW(P,H,edgeForPrediction,prob_matrix,edge_num,t):
+#传入步数t，得到2~t步(含t步)概率转移矩阵字典{"步数t":t步概率转移矩阵}，其中1步转移矩阵就是概率转移矩阵P
+def getNPMatrixDict(P,t):
     NPmatrix = {}
-    HSRW_info = {}
     NP = getNPmatrix(P, 2)
     NPmatrix["2"] = NP
-    for i in range(3,t+1):
-        NP = np.dot(NP,NP)
+    for i in range(3, t + 1):
+        NP = np.dot(NP, NP)
         NPmatrix[str(i)] = NP
+    return NPmatrix
 
+#传入2~t步(含t步)概率转移矩阵字典，得到每步每个节点到其他节点的转移概率矩阵字典{"步数t":节点转移概率矩阵}
+def getNVerTransProbMatrixDict(NPmatrix,ver_num):
+    NProbMatrixDict = {}
+    ver_matrix = np.eye(ver_num)
+    for n in NPmatrix:
+        NProbMatrixDict[n] = np.dot(ver_matrix,NPmatrix[n])
+    return NProbMatrixDict
+
+#传入2~N步概率转移矩阵字典,得到各个待预测边2~t步转移分之和HSRW,其中H代表单纯的H指数
+def getHSRW(H,edgeForPrediction,NProbMatrixDict,edge_num):
+    HSRW_info = {}
     for i in edgeForPrediction:
         for j in edgeForPrediction[i]:
             if int(i) < int(j):
                 HSRW_info[(i,j)] = 0
 
-    for n in NPmatrix:
+    for n in NProbMatrixDict:
         print("======================{index}=======================".format(index=n))
         for edge in HSRW_info:
             i = list(edge)[0]
             j = list(edge)[1]
-            score = (H[i] * NPmatrix[n][int(i)][int(j)] + H[j] * NPmatrix[n][int(j)][int(i)]) /(2*edge_num)
+            score = (H[i] * NProbMatrixDict[n][int(i)][int(j)] + H[j] * NProbMatrixDict[n][int(j)][int(i)]) /(2*edge_num)
             HSRW_info[(i, j)] = HSRW_info[(i, j)] + score
+            print(edge,"->",HSRW_info[edge],"+",score)
+        print(HSRW_info)
     return HSRW_info
+
+def getHn_HSRW(Hn,edgeForPrediction,NProbMatrixDict,edge_num):
+    Hn_HSRW_info = {}
+    Hn_HSRW = {}
+
+    for i in edgeForPrediction:
+        for j in edgeForPrediction[i]:
+            if int(i) < int(j):
+                Hn_HSRW[(i, j)] = 0
+    temp_Hn_HSRW = Hn_HSRW
+
+    for k in Hn:
+        Hn_HSRW = deepcopy(temp_Hn_HSRW)
+        print("===============================Hn_HSRW============================")
+        print(Hn_HSRW)
+        print("================================={k}=============================".format(k=k))
+        for n in NProbMatrixDict:
+            print("------------{index}-step----------".format(index=n))
+            for edge in Hn_HSRW:
+                i = list(edge)[0]
+                j = list(edge)[1]
+                score = (Hn[k][i] * NProbMatrixDict[n][int(i)][int(j)] + Hn[k][j] * NProbMatrixDict[n][int(j)][int(i)]) / (2 * edge_num)
+                Hn_HSRW[(i, j)] = Hn_HSRW[(i, j)] + score
+        Hn_HSRW_info[k] = Hn_HSRW
+    return Hn_HSRW_info
 
 
 #传入列表形式的测试集，字典形式的分数信息，输出auc
@@ -299,15 +337,22 @@ for j in H_RA:
     print("")
 v=["0","1","2","3","4","5"]
 eforPre = getEdgeForPredict(net,v)
-probMatrix=getVerticeTransformProbMatrix(P2)
+probMatrix=getVerTransProbMatrix(P2)
 lrw=LRW(eforPre,d,4,probMatrix)
 print("lrw:",lrw)
 getHn_LRW(eforPre,Hn,4,probMatrix)
+Hn_Pmatrix=getNPMatrixDict(P,4)
+NProbMatrix=getNVerTransProbMatrixDict(Hn_Pmatrix,len(v))
+print("===================================Calculating HSRW=====================================")
+HSRW = getHSRW(Hn['h(1)'],eforPre,NProbMatrix,4)
+print(HSRW)
+auc_HSRW = getAUC(te,HSRW)
+print("auc_HSRW:",auc_HSRW)
+print("===================Calculating Hn_HSRW=========================")
+Hn_HSRW = getHn_HSRW(Hn,eforPre,NProbMatrix,len(v))
+for n in Hn_HSRW:
+    print("auc_Hn_HSRW_{n}".format(n=n),":",getAUC(te,Hn_HSRW[n]))
 
-
-
-
-getHSRW(P,Hn['h(1)'],eforPre,probMatrix,4,4)
 plt.figure()
 nx.draw(G,with_labels=True)
 plt.show()
