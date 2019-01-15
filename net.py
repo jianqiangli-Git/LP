@@ -165,7 +165,7 @@ if __name__ == "__main__":
         plt.savefig(savefig_path+"\\{name}_step.pdf".format(name=name))
 
         #画Hn_indice的AUC跟迭代次数n的关系
-        linestyle = ['-', '-.', '^', '2', 's', 'p', '*', '+', 'd', 'v']
+        linestyle = ['-', '-.', '2', 'p', '*', '+', 'v']
         color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         style = []
         for i in range(len(color)):
