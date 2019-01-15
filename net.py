@@ -123,10 +123,9 @@ if __name__ == "__main__":
 
         axis_x = np.linspace(2,step,endpoint=True,num=step-2+1)
         print("len_axis:",len(axis_x))
-        plt.xlim((0,16))
-        plt.ylim((0.85,0.98))
+
         plt.xticks(np.linspace(0,step,endpoint=True,num=step-0+1),fontsize=6)
-        plt.yticks(np.linspace(0.85,0.98,50),fontsize=6)
+        plt.yticks(np.linspace(0.85,0.98,50),fontsize=4)
         y_LRW = LRW_plot
         print("len_y_LRW:",len(y_LRW))
         plt.figure(1)
@@ -148,7 +147,7 @@ if __name__ == "__main__":
                 print(y_Hn_HSRW_plot)
             y_Hn_LRW_plotDict[str(i)] = y_Hn_LRW_plot
             y_Hn_HSRW_plotDict[str(i)] = y_Hn_HSRW_plot
-        linestyle = ['-', '-.', '^', '2', 's', 'p', '*', '+', 'd','v']
+        linestyle = ['-', '-.', '2', 'p', '*', '+','v']
         color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         style = []
         for i in range(len(color)):
@@ -167,7 +166,7 @@ if __name__ == "__main__":
 
         #画Hn_indice的AUC跟迭代次数n的关系
         linestyle = ['-', '-.', '^', '2', 's', 'p', '*', '+', 'd', 'v']
-        color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         style = []
         for i in range(len(color)):
             for j in range(len(linestyle)):
