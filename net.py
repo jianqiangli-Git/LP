@@ -41,7 +41,6 @@ if __name__ == "__main__":
     #    run_num = 5
     #    for num in range(run_num):
         tr, te = LP.devide_train_and_test_set(edges, 0.1)
-        print("te:", te)
         # G.add_edges_from(tr)
         # nodes = set(G.nodes())
         v = set(LP.getVertice(edges))
@@ -107,14 +106,14 @@ if __name__ == "__main__":
                 AUC_Hn_HSRW.append(auc_hn_HSRW)
             print(AUC_Hn_HSRW)
             Hn_HSRW_plot[str(s)] = AUC_Hn_HSRW
-        print("LRW_plot")
-        print(LRW_plot)
-        print("Hn_LRW_plot")
-        print(Hn_LRW_plot)
-        print("HSRW_plot")
-        print(HSRW_plot)
-        print("Hn_HSRW_plot")
-        print(Hn_HSRW_plot)
+        # print("LRW_plot")
+        # print(LRW_plot)
+        # print("Hn_LRW_plot")
+        # print(Hn_LRW_plot)
+        # print("HSRW_plot")
+        # print(HSRW_plot)
+        # print("Hn_HSRW_plot")
+        # print(Hn_HSRW_plot)
 
         y_Hn_LRW_plotDict = {}
         y_Hn_HSRW_plotDict = {}
@@ -126,15 +125,15 @@ if __name__ == "__main__":
         print("len_axis:",len(axis_x))
         plt.xlim((0,16))
         plt.ylim((0.85,0.98))
-        plt.xticks(np.linspace(0,step,endpoint=True,num=step-0+1))
-        plt.yticks(np.linspace(0.85,0.98,50))
+        plt.xticks(np.linspace(0,step,endpoint=True,num=step-0+1),fontsize=6)
+        plt.yticks(np.linspace(0.85,0.98,50),fontsize=6)
         y_LRW = LRW_plot
         print("len_y_LRW:",len(y_LRW))
         plt.figure(1)
-        plt.plot(axis_x,y_LRW,linestyle = "-.",label = "LRW",linewidth=1)
+        plt.plot(axis_x,y_LRW,"x",label = "LRW",linewidth=0.5)
 
         y_HSRW = HSRW_plot
-        plt.plot(axis_x,y_HSRW,linestyle = "--",label = "HSRW",linewidth=1)
+        plt.plot(axis_x,y_HSRW,"--",label = "HSRW",linewidth=0.5)
 
 
         for i in range(iter_num+1):
@@ -149,22 +148,16 @@ if __name__ == "__main__":
                 print(y_Hn_HSRW_plot)
             y_Hn_LRW_plotDict[str(i)] = y_Hn_LRW_plot
             y_Hn_HSRW_plotDict[str(i)] = y_Hn_HSRW_plot
-        linestyle = ['-', '-.', '^', '2', 's', 'p', '*', '+', 'x', 'd','v']
-        color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-        for i in range(len(linestyle)):
-            j = 0
-            while (j < len(color)):
-                for h_lrw in y_Hn_LRW_plotDict:
-                    plt.plot(axis_x, y_Hn_LRW_plotDict[h_lrw],'{style}'.format(style=linestyle[i]),color=color[j],label="h({index})_LRW".format(index=h_lrw),linewidth=0.5)
-                    j = j + 1
-                for h_hsrw in y_Hn_HSRW_plotDict:
-                    plt.plot(axis_x, y_Hn_HSRW_plotDict[h_hsrw],'{style}'.format(style=linestyle[i]),color=color[j],label="h({index})_HSRW".format(index=h_hsrw),linewidth=0.5)
-                    j = j + 1
-
+        linestyle = ['-', '-.', '^', '2', 's', 'p', '*', '+', 'd','v']
+        color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        style = []
+        for i in range(len(color)):
+            for j in range(len(linestyle)):
+                style.append(color[i] + linestyle[j] )
         for h_lrw in y_Hn_LRW_plotDict:
-            plt.plot(axis_x,y_Hn_LRW_plotDict[h_lrw],label = "h({index})_LRW".format(index=h_lrw),linewidth=0.5)
+            plt.plot(axis_x,y_Hn_LRW_plotDict[h_lrw],'{style}'.format(style=style.pop()),label = "h({index})_LRW".format(index=h_lrw),linewidth=0.5)
         for h_hsrw in y_Hn_HSRW_plotDict:
-            plt.plot(axis_x, y_Hn_HSRW_plotDict[h_hsrw],label = "h({index})_HSRW".format(index=h_hsrw),linewidth=0.5)
+            plt.plot(axis_x, y_Hn_HSRW_plotDict[h_hsrw],'{style}'.format(style=style.pop()),label = "h({index})_HSRW".format(index=h_hsrw),linewidth=0.5)
         plt.legend(loc = "upper right",fontsize="x-small",ncol = 2)
 
         plt.xlabel("steps")
@@ -173,16 +166,22 @@ if __name__ == "__main__":
         plt.savefig(savefig_path+"\\{name}_step.pdf".format(name=name))
 
         #画Hn_indice的AUC跟迭代次数n的关系
+        linestyle = ['-', '-.', '^', '2', 's', 'p', '*', '+', 'd', 'v']
+        color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        style = []
+        for i in range(len(color)):
+            for j in range(len(linestyle)):
+                style.append(color[i] + linestyle[j] )
         axis_n = np.linspace(0,iter_num,endpoint=True,num=iter_num-0+1)
         plt.figure()
 
-        plt.xticks(np.linspace(0, iter_num, endpoint=True, num=step - 0 + 1))
-        plt.yticks(np.linspace(0.85, 0.98, 50))
+        plt.xticks(np.arange(0,iter_num+1,1),fontsize=6)
+        plt.yticks(np.linspace(0.85, 0.98, 50),fontsize=6)
 
         for n_LRW in Hn_LRW_plot:
-            plt.plot(axis_n,Hn_LRW_plot[n_LRW],label="{s}step_LRW".format(s=n_LRW),linewidth=0.5)
+            plt.plot(axis_n,Hn_LRW_plot[n_LRW],'{style}'.format(style=style.pop()),label="{s}step_LRW".format(s=n_LRW),linewidth=0.5)
         for n_HSRW in Hn_HSRW_plot:
-            plt.plot(axis_n, Hn_LRW_plot[n_HSRW], label="{s}step_HSRW".format(s=n_HSRW), linewidth=0.5)
+            plt.plot(axis_n, Hn_LRW_plot[n_HSRW],'{style}'.format(style=style.pop()),label="{s}step_HSRW".format(s=n_HSRW), linewidth=0.5)
         plt.legend(loc="upper right", fontsize="x-small", ncol=2)
 
         plt.xlabel("n")
@@ -190,4 +189,4 @@ if __name__ == "__main__":
         plt.title(name)
         plt.savefig(savefig_path + "\\{name}_n.pdf".format(name=name))
 
-        plt.show()
+
