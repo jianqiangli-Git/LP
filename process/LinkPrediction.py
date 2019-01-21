@@ -119,6 +119,18 @@ def getCommonNeighbor_node(G,cur,vertice):
                 commom[(v,n)] = sorted(nx.common_neighbors(G,n,v))
     return commom
 
+def CN_num(adjMatrix,vertice,cur):
+    CN_info = {}
+    set_ver = set(vertice)
+    square = adjMatrix.dot(adjMatrix)
+    print(square)
+    for v in vertice:
+        notDirecLinked = set_ver-set(cur[v])
+        for n in notDirecLinked:
+            if int(n)>int(v):
+                CN_info[(v,n)]=square[int(v)][int(n)]
+    return CN_info
+
 #把边集分成测试集和训练集，列表形式,传入的比率是测试集的占比
 def devide_train_and_test_set(edges,ratio):
     dup_edges = deepcopy(edges)
@@ -162,7 +174,7 @@ def getHIndice(cur,degreeDict,c):
     order = 0
     HIndice["h(%s)"%order]=degreeDict
     indice = []
-    for order in range(1,20):
+    for order in range(1,40):
         Hn = {}
         for i in cur:
             for j in cur[i]:
@@ -173,10 +185,11 @@ def getHIndice(cur,degreeDict,c):
         #print(Hn)
         HIndice["h({b})".format(b=order)]=Hn
         if Hn==c:
+            print("iteration num: ",order)
             break
-    return HIndice
+    return order,HIndice
 
-#传入图的字典形式和度的字典，得到这个图的概率转移矩阵 PMatrix
+#传入图的字典形式和度的字典,得到这个图的概率转移矩阵 PMatrix
 def creatPMatrix(net,degreeDict):
     n = len(net.keys())
     PMatrix = np.zeros((n,n))
@@ -187,30 +200,43 @@ def creatPMatrix(net,degreeDict):
             PMatrix[int(i)][int(j)] = 1/degreeDict[i]
     return PMatrix
 
-#传入概率转移矩阵PMatrix，得到n步概率转移矩阵
+#传入概率转移矩阵PMatrix和步数n,得到n步概率转移矩阵
 def getNPmatrix(PMatrix,n):
     for i in range(n-1):
         PMatrix = np.dot(PMatrix,PMatrix)
     return PMatrix
 
+# #传入n-step概率转移矩阵得到每个节点转移到其他节点的概率矩阵
+# def getVerticeTransformProbMatrix(NPmatrix):
+#     n = len(NPmatrix[0])
+#     ver_matrix = np.eye(n)
+#     prob_matrix = np.dot(ver_matrix, NPmatrix)
+#     return prob_matrix
+
+#传入最大步数t，得到2~t步(含t步)概率转移矩阵字典{"步数t":t步概率转移矩阵}，其中1步转移矩阵就是概率转移矩阵P
+def getNPMatrixDict(P,t):
+    NPmatrixDict = {}
+    NP = getNPmatrix(P, 2)
+    NPmatrixDict["2"] = NP
+    for i in range(3, t + 1):
+        NP = np.dot(NP, NP)
+        NPmatrixDict[str(i)] = NP
+    return NPmatrixDict
+
 #传入n-step转移概率矩阵得到每个节点转移到其他节点的概率矩阵
-def getVerticeTransformProbMatrix(NPmatrix):
+def getVerTransProbMatrix(NPmatrix):
     n = len(NPmatrix[0])
     ver_matrix = np.eye(n)
     prob_matrix = np.dot(ver_matrix, NPmatrix)
     return prob_matrix
 
-def CN_num(adjMatrix,vertice,cur):
-    CN_info = {}
-    set_ver = set(vertice)
-    square = adjMatrix.dot(adjMatrix)
-    print(square)
-    for v in vertice:
-        notDirecLinked = set_ver-set(cur[v])
-        for n in notDirecLinked:
-            if int(n)>int(v):
-                CN_info[(v,n)]=square[int(v)][int(n)]
-    return CN_info
+#传入2~t步(含t步)概率转移矩阵字典和节点数,得到每步每个节点到其他节点的转移概率矩阵字典{"步数t":节点转移概率矩阵}
+def getNVerTransProbMatrixDict(NPmatrixDict,ver_num):
+    NProbMatrixDict = {}
+    ver_matrix = np.eye(ver_num)
+    for n in NPmatrixDict:
+        NProbMatrixDict[n] = np.dot(ver_matrix,NPmatrixDict[n])
+    return NProbMatrixDict
 
 #通过调用networkX库函数得到AA_RA指标，并存储到AA_info，RA_info字典中
 def AA_RA(G):
@@ -256,8 +282,6 @@ def getHn_AA_RA(Hn):
 #传入n步转移矩阵，待预测的边的字典，图节点的度字典，边的总数得到每对待预测边的lrw分
 def LRW(edgeForPrediction,degreeDict,edge_num,prob_matrix):
     lrw_info = {}
-    print("probMatrix:")
-    print(prob_matrix)
     for i in edgeForPrediction:
         for j in edgeForPrediction[i]:
             if int(i)<int(j):
@@ -276,30 +300,7 @@ def getHn_LRW(edgeForPrediction,Hn,edge_num,prob_matrix):
         Hn_LRW_info[n] = Hn_LRW
     return Hn_LRW_info
 
-#传入步数t，得到2~t步(含t步)概率转移矩阵字典{"步数t":t步概率转移矩阵}，其中1步转移矩阵就是概率转移矩阵P
-def getNPMatrixDict(P,t):
-    NPmatrixDict = {}
-    NP = getNPmatrix(P, 2)
-    NPmatrixDict["2"] = NP
-    for i in range(3, t + 1):
-        NP = np.dot(NP, NP)
-        NPmatrixDict[str(i)] = NP
-    return NPmatrixDict
 
-#传入n-step转移概率矩阵得到每个节点转移到其他节点的概率矩阵
-def getVerTransProbMatrix(NPmatrix):
-    n = len(NPmatrix[0])
-    ver_matrix = np.eye(n)
-    prob_matrix = np.dot(ver_matrix, NPmatrix)
-    return prob_matrix
-
-#传入2~t步(含t步)概率转移矩阵字典和节点数,得到每步每个节点到其他节点的转移概率矩阵字典{"步数t":节点转移概率矩阵}
-def getNVerTransProbMatrixDict(NPmatrixDict,ver_num):
-    NProbMatrixDict = {}
-    ver_matrix = np.eye(ver_num)
-    for n in NPmatrixDict:
-        NProbMatrixDict[n] = np.dot(ver_matrix,NPmatrixDict[n])
-    return NProbMatrixDict
 
 #传入2~N步概率转移矩阵字典,得到各个待预测边2~t步转移分之和HSRW,其中H代表单纯的H指数
 def getHSRW(H,edgeForPrediction,NProbMatrix,edge_num):
@@ -310,7 +311,7 @@ def getHSRW(H,edgeForPrediction,NProbMatrix,edge_num):
                 HSRW_info[(i,j)] = 0
 
     for n in NProbMatrix:
-        print("======================{index}=======================".format(index=n))
+        # print("======================{index}=======================".format(index=n))
         for edge in HSRW_info:
             i = list(edge)[0]
             j = list(edge)[1]
@@ -331,10 +332,10 @@ def getHn_HSRW(Hn,edgeForPrediction,NProbMatrixDict,edge_num):
 
     for k in Hn:
         Hn_HSRW = deepcopy(temp_Hn_HSRW)
-        print("===============================Hn_HSRW============================")
-        print("================================={k}=============================".format(k=k))
+        # print("===============================Hn_HSRW============================")
+        # print("================================={k}=============================".format(k=k))
         for n in NProbMatrixDict:
-            print("------------{index}-step----------".format(index=n))
+            # print("------------{index}-step----------".format(index=n))
             for edge in Hn_HSRW:
                 i = list(edge)[0]
                 j = list(edge)[1]

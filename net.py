@@ -6,18 +6,18 @@ import random
 import networkx as nx
 
 net_path = [
-    r"C:\Users\Tang\Desktop\data\USAir.txt",
-    r"C:\Users\Tang\Desktop\data\Adolescent.txt",
-    r"C:\Users\Tang\Desktop\data\Celegans.txt",
-    r"C:\Users\Tang\Desktop\data\Food Webs\Florida.txt",
-    r"C:\Users\Tang\Desktop\data\Jazz.txt",
-    r"C:\Users\Tang\Desktop\data\KingJames.txt",
-    r"C:\Users\Tang\Desktop\data\NetScience.txt",
-    r"C:\Users\Tang\Desktop\data\Politicalblogs.txt",
-    r"C:\Users\Tang\Desktop\data\Power.txt",
     r"C:\Users\Tang\Desktop\data\Router.txt",
     r"C:\Users\Tang\Desktop\data\SciMet.txt",
-    r"C:\Users\Tang\Desktop\data\Yeast.txt"
+    r"C:\Users\Tang\Desktop\data\Yeast.txt",
+    r"C:\Users\Tang\Desktop\data\Food Webs\Florida.txt",
+    r"C:\Users\Tang\Desktop\data\Adolescent.txt",
+    r"C:\Users\Tang\Desktop\data\KingJames.txt",
+    r"C:\Users\Tang\Desktop\data\USAir.txt",
+    r"C:\Users\Tang\Desktop\data\Jazz.txt",
+    r"C:\Users\Tang\Desktop\data\Celegans.txt",
+    r"C:\Users\Tang\Desktop\data\NetScience.txt",
+    r"C:\Users\Tang\Desktop\data\Politicalblogs.txt",
+    r"C:\Users\Tang\Desktop\data\Power.txt"
 ]
 
 savefig_path=r"E:\MechinLearning\LinkPrediction\figure"
@@ -41,9 +41,11 @@ if __name__ == "__main__":
     #    run_num = 5
     #    for num in range(run_num):
         tr, te = LP.devide_train_and_test_set(edges, 0.1)
+        print("len_edges:",len(edges))
         # G.add_edges_from(tr)
         # nodes = set(G.nodes())
         v = set(LP.getVertice(edges))
+        print("len_v:",len(v))
         net = LP.dictNet(tr, v)
         G = nx.Graph(net)
         # adj = createAdj(v, net)
@@ -125,7 +127,7 @@ if __name__ == "__main__":
         print("len_axis:",len(axis_x))
 
         plt.xticks(np.linspace(0,step,endpoint=True,num=step-0+1),fontsize=6)
-        plt.yticks(np.linspace(0.85,0.98,50),fontsize=4)
+        plt.yticks(np.linspace(0.7,1,50),fontsize=4)
         y_LRW = LRW_plot
         print("len_y_LRW:",len(y_LRW))
         plt.figure(1)
@@ -175,7 +177,7 @@ if __name__ == "__main__":
         plt.figure()
 
         plt.xticks(np.arange(0,iter_num+1,1),fontsize=6)
-        plt.yticks(np.linspace(0.85, 0.98, 50),fontsize=6)
+        plt.yticks(np.linspace(0.7, 1, 50),fontsize=6)
 
         for n_LRW in Hn_LRW_plot:
             plt.plot(axis_n,Hn_LRW_plot[n_LRW],'{style}'.format(style=style.pop()),label="{s}step_LRW".format(s=n_LRW),linewidth=0.5)
