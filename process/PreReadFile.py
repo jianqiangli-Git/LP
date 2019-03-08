@@ -13,7 +13,7 @@ def standard(item):
 
 # 读取文件部分
 def readFile(file_path):
-    f = np.loadtxt(file_path,dtype=int,usecols=(0,1))
+    f =  np.loadtxt(file_path,dtype=int,usecols=(0,1))
     f = np.array(list(map(standard,f)))
     remove_dup = np.unique(f, axis=0)
     start_v = np.min(remove_dup)
@@ -21,3 +21,9 @@ def readFile(file_path):
     edge = np.ndarray.tolist(remove_dup)
     edges = [[str(item[0]), str(item[1])] for item in edge]
     return edges
+
+
+# 写文件部分
+def writeFile(file_path,data):
+    with open(file_path,'a') as f:
+        f.write(str(data)+'\n')
